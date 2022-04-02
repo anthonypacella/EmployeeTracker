@@ -19,6 +19,7 @@ const db = mysql.createConnection(
 );
 
 const viewAllEmployees = "View All Employees";
+const addEmployee = "Add Employee";
 const updateEmployeeRole = "Update Employee Role";
 const viewAllRoles = "View All Roles";
 const addRole = "Add Role";
@@ -35,6 +36,7 @@ function init() {
         name: "navigation",
         choices: [
           viewAllEmployees,
+          addEmployee,
           updateEmployeeRole,
           viewAllRoles,
           addRole,
@@ -49,6 +51,47 @@ function init() {
 
       if (data.navigation == viewAllEmployees) {
         viewInfo("employees");
+      } else if (data.navigation == addEmployee) {
+        inquirer
+        .prompt([
+          {
+            type: "input",
+            name: "first_name",
+            message: "What is the employee's first name?",
+          },
+          {
+            type: "input",
+            name: "last_name",
+            message: "What is the employee's last name?",
+          },
+          {
+            type: "list",
+            name: "role_title",
+            message:
+              "What is the employee's role?",
+            choices: showRoles()
+          },
+          {
+            type: "list",
+            name: "manager",
+            message:
+              "Who is the employee's manager?",
+            choices: showManagers()
+          }
+        ])
+        .then((data) => {
+            
+            let qString = ` INSERT INTO employees (first_name, last_name, role_id, manager_id) 
+                            VALUES ('${data.first_name}', '${data.last_name}', (SELECT id from (SELECT * FROM roles) roles2  WHERE role_title = '${data.role_title}'), (SELECT id from (SELECT * FROM employees) employees2 WHERE first_name = '${data.first_name}' and last_name='${data.last_name}'));`
+
+            db.query(qString, function (err, results) {
+                console.log("Employee added");
+                init();
+              });
+
+          });
+
+        addEmployeeFunction();
       } else if (data.navigation == updateEmployeeRole) {
         updateInfo();
       } else if (data.navigation == viewAllRoles) {
@@ -76,7 +119,7 @@ function init() {
           ])
           .then((data) => {
             db.query(`  INSERT INTO roles (role_title, role_salary, department_id)
-                        VALUES ('${data.role_title}',${data.role_salary}, (SELECT id FROM departments WHERE department_name = '${data.department_name}'))`, function (err, results) {
+                        VALUES ('${data.role_title}',${data.role_salary}, (SELECT id FROM departments WHERE department_name = '${data.department_name}'));`, function (err, results) {
                             console.log("Role Added");
                             init();
                         });
@@ -96,7 +139,7 @@ function init() {
           .then((data) => {
             db.query(`  INSERT INTO departments (department_name)
                         VALUES ('${data.department_name}')`, function (err, results) {
-                            console.log("Department Added");
+                            console.log(`Department ${data.department_name} Added to the database`);
                             init();
                         });          
                     });
@@ -112,8 +155,10 @@ function viewInfo(info) {
 
     if (info == "employees") {
         qString = `   
-        SELECT employees.id ID, employees.first_name First_Name, employees.last_name Last_Name, roles.role_title Title, departments.department_name Department, roles.role_salary Salary FROM employees
+        SELECT employees.id ID, employees.first_name First_Name, employees.last_name Last_Name, roles.role_title Title, departments.department_name Department, roles.role_salary Salary, concat(emp2.first_name, ' ', emp2.last_name) Manager
+        FROM employees
         JOIN roles ON employees.role_id = roles.id 
+        JOIN employees emp2 ON employees.manager_id = emp2.id
         JOIN departments ON roles.department_id = departments.id
         `;
     }
@@ -134,23 +179,14 @@ function viewInfo(info) {
   });
 }
 
-function addInfo(table, valuesArray) {
-  if (table == "departments") {
-    db.query(
-      `INSERT INTO ${table} (department_name) VALUES (${valuesArray[0]});`
-    );
-  } else if (table == "roles") {
-    db.query(
-      `INSERT INTO ${table} (role_title, role_salary, department_id) VALUES (${valuesArray[0]},${valuesArray[1]}, ${valuesArray[2]});`
-    );
-  } else if (table == "employees") {
-    db.query(
-      `INSERT INTO ${table} (first_name, last_name, role_id, manager_id) VALUES (${valuesArray[0]},${valuesArray[1]}, ${valuesArray[2]}, ${valuesArray[3]});`
-    );
-  }
+function addEmployeeFunction() {
+
 }
 
-function updateInfo() {}
+function updateInfo() {
+
+
+}
 
 function showDepartments () {
     qString = `   
@@ -165,5 +201,35 @@ function showDepartments () {
     });
 
     return deptArray;
+}
+
+function showRoles () {
+    qString = `   
+        SELECT role_title FROM roles
+        `;
+    let rolesArray = [];
+
+  db.query(qString, function (err, results) {
+    for (let i = 0; i < results.length; i++) {
+        rolesArray[i] = results[i].role_title;
+        }
+    });
+
+    return rolesArray;
+}
+
+function showManagers () {
+    qString = `   
+        SELECT concat(employees.first_name, ' ', employees.last_name) Full_Name FROM employees
+        `;
+    let employeesArray = [];
+
+  db.query(qString, function (err, results) {
+    for (let i = 0; i < results.length; i++) {
+         employeesArray[i] = results[i].Full_Name;
+         }
+    });
+
+    return employeesArray;
 }
 init();
