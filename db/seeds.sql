@@ -6,7 +6,7 @@ VALUES  ("Human Resources"),
        
 INSERT INTO roles (role_title, role_salary, department_id)
 VALUES  ("Billing Coordinator", 55000.00, 003),
-        ("Representative", 33000,00, 004),
+        ("Representative", 33000.00, 004),
         ("Sr. Electrical Engineer", 88000.00, 002),
         ("Human Resources Manager", 60000.00, 001);
 
