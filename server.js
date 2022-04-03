@@ -76,13 +76,13 @@ function init() {
             name: "manager",
             message:
               "Who is the employee's manager?",
-            choices: showManagers()
+            choices: showEmployees()
           }
         ])
         .then((data) => {
             
             let qString = ` INSERT INTO employees (first_name, last_name, role_id, manager_id) 
-                            VALUES ('${data.first_name}', '${data.last_name}', (SELECT id from (SELECT * FROM roles) roles2  WHERE role_title = '${data.role_title}'), (SELECT id from (SELECT * FROM employees) employees2 WHERE first_name = '${data.first_name}' and last_name='${data.last_name}'));`
+                            VALUES ('${data.first_name}', '${data.last_name}', (SELECT id from (SELECT * FROM roles) roles2  WHERE role_title = '${data.role_title}'), (SELECT id from (SELECT * FROM employees) employees2 WHERE CONCAT(first_name, ' ', last_name) = '${data.manager}'));`
 
             db.query(qString, function (err, results) {
                 console.log("Employee added");
@@ -91,9 +91,39 @@ function init() {
 
           });
 
-        addEmployeeFunction();
       } else if (data.navigation == updateEmployeeRole) {
-        updateInfo();
+        inquirer
+        .prompt([
+          {
+            type: "input",
+            name: "validation",
+            message: "Press ENTER to continue"
+          },
+          {
+            type: "list",
+            name: "employee_name",
+            message:
+              "What employee's role do you want to update?",
+            choices: showEmployees()
+          },
+          {
+            type: "list",
+            name: "role_title",
+            message:
+              "Which role do you want to assign to this employee?",
+            choices: showRoles()
+          }
+        ])
+        .then((data) => {
+            
+            let qString = `UPDATE employees SET role_id = (SELECT id FROM roles WHERE role_title = '${data.role_title}')  WHERE CONCAT(first_name, ' ', last_name) = '${data.employee_name}'`
+
+            db.query(qString, function (err, results) {
+                console.log("Updated employee's role");
+                init();
+              });
+
+          });
       } else if (data.navigation == viewAllRoles) {
         viewInfo("roles");
       } else if (data.navigation == addRole) {
@@ -179,15 +209,6 @@ function viewInfo(info) {
   });
 }
 
-function addEmployeeFunction() {
-
-}
-
-function updateInfo() {
-
-
-}
-
 function showDepartments () {
     qString = `   
         SELECT department_name FROM departments
@@ -218,11 +239,13 @@ function showRoles () {
     return rolesArray;
 }
 
-function showManagers () {
+function showEmployees () {
+    
+  let employeesArray = [];
     qString = `   
         SELECT concat(employees.first_name, ' ', employees.last_name) Full_Name FROM employees
         `;
-    let employeesArray = [];
+    
 
   db.query(qString, function (err, results) {
     for (let i = 0; i < results.length; i++) {
@@ -232,4 +255,5 @@ function showManagers () {
 
     return employeesArray;
 }
+
 init();
